@@ -1,5 +1,5 @@
 import { FastifyReply, FastifyRequest } from "fastify";
-import { PaymentData, processPayment } from "../services/paymentService";
+import { getPaymentSummary, PaymentData, processPayment } from "../services/paymentService";
 
 export async function createPaymentController(req: FastifyRequest<{ Body: PaymentData }>, reply: FastifyReply) {
     const { body } = req;
@@ -11,7 +11,7 @@ export async function createPaymentController(req: FastifyRequest<{ Body: Paymen
     return { message: 'Payment processed', paymentProcessed };
 };
 
-export async function paymentSummaryController(req: FastifyRequest) {
-    console.log('Payment summary received', req.host);
-    return { message: 'Payment summary received on controller' };
+export async function paymentSummaryController() {
+    const paymentSummary = await getPaymentSummary();
+    return { message: 'Payment summary received', paymentSummary };
 };

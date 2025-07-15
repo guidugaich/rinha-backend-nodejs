@@ -2,7 +2,7 @@ import { config } from 'dotenv';
 import Fastify, { FastifyInstance } from 'fastify';
 import paymentRoutes from './routes/paymentRoutes';
 
-config(); // Load environment variables from .env file
+config();
 
 const server: FastifyInstance = Fastify({ logger: true });
 

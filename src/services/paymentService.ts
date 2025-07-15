@@ -1,3 +1,7 @@
+import { config } from 'dotenv';
+
+config();
+
 export interface PaymentData {
   amount: number;
   correlationId: string;

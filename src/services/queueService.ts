@@ -1,9 +1,6 @@
 import { pool } from '../database/connection';
+import { PaymentJob } from '../shared/interfaces';
 import { processPayment } from './paymentService';
-
-interface PaymentJob {
-  paymentId: string;
-}
 
 const queue: PaymentJob[] = [];
 
@@ -23,7 +20,7 @@ async function processQueue() {
     try {
       console.log(`Processing payment job for ID: ${job.paymentId}`);
 
-      const paymentQuery = await pool.query('SELECT amount, correlation_id, created_at FROM payments WHERE correlation_id = $1', [job.paymentId]);
+      const paymentQuery = await pool.query('SELECT amount_cents, correlation_id, created_at FROM payments WHERE correlation_id = $1', [job.paymentId]);
       
       if (paymentQuery.rows.length === 0) {
           console.error(`Payment with ID ${job.paymentId} not found in DB.`);

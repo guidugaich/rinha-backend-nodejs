@@ -1,0 +1,30 @@
+export interface PaymentSummaryResponse {
+    default: {
+        totalRequests: number;
+        totalAmount: number;
+    },
+    fallback: {
+        totalRequests: number;
+        totalAmount: number;
+    }
+}
+
+export interface PaymentRequest {
+    correlationId: string;
+    amount: number;
+}
+
+export interface PaymentData {
+    amount_cents: number;
+    correlation_id: string;
+    created_at: Date;
+  }
+
+export interface PaymentJob {
+    paymentId: string;
+}
+
+export interface PaymentResult {
+    success: boolean;
+    processor: 'default' | 'fallback' | 'none';
+}

@@ -1,25 +1,15 @@
 import { config } from 'dotenv';
 import { pool } from '../database/connection';
+import { PaymentData, PaymentResult } from '../shared/interfaces';
 
 config();
-
-export interface PaymentData {
-  amount: number;
-  correlation_id: string;
-  created_at: Date;
-}
-
-interface PaymentResult {
-  success: boolean;
-  processor: 'default' | 'fallback' | 'none';
-}
 
 const processorDefaultHost = process.env.PAYMENT_PROCESSOR_DEFAULT_HOST;
 const processorFallbackHost = process.env.PAYMENT_PROCESSOR_FALLBACK_HOST;
 
 export async function processPayment(data: PaymentData): Promise<PaymentResult> {
   const requestBody = {
-    amount: data.amount,
+    amount: data.amount_cents / 100,
     correlationId: data.correlation_id,
     requestedAt: data.created_at.toISOString()
   }
@@ -62,13 +52,13 @@ export async function processPayment(data: PaymentData): Promise<PaymentResult> 
 
 export async function createPendingPayment(
   correlationId: string,
-  amount: number,
+  amountCents: number,
   createdAt: Date,
 ): Promise<void> {
   try {
       await pool.query(
-          'INSERT INTO payments (correlation_id, amount, status, "created_at") VALUES ($1, $2, $3, $4)',
-          [correlationId, amount, 'pending', createdAt]
+          'INSERT INTO payments (correlation_id, amount_cents, status, "created_at") VALUES ($1, $2, $3, $4)',
+          [correlationId, amountCents, 'pending', createdAt]
       );
   } catch (error) {
       console.error(`Database error creating pending payment for ${correlationId}:`, error);

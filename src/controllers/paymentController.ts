@@ -2,7 +2,7 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { addPaymentJob } from '../services/queueService';
 import { getPaymentSummary } from "../services/paymentSummaryService";
 import { createPendingPayment } from "../services/paymentService";
-import { PaymentSummaryResponse, PaymentRequest } from "../shared/interfaces";
+import { PaymentSummaryResponse, PaymentRequest, SummaryQuery } from "../shared/interfaces";
 
 export async function createPaymentController(req: FastifyRequest<{ Body: PaymentRequest }>, reply: FastifyReply) {
     const { correlationId, amount } = req.body;
@@ -23,7 +23,20 @@ export async function createPaymentController(req: FastifyRequest<{ Body: Paymen
     }
 }
 
-export async function paymentSummaryController(_req: FastifyRequest, reply: FastifyReply): Promise<PaymentSummaryResponse> {
-    const paymentSummary = await getPaymentSummary();
+export async function paymentSummaryController(
+    req: FastifyRequest<{ Querystring: SummaryQuery }>,
+    reply: FastifyReply
+): Promise<PaymentSummaryResponse> {
+    const { from, to } = req.query;
+
+    if (from && isNaN(new Date(from).getTime())) {
+        return reply.status(400).send({ message: 'Invalid "from" date format. Please use UTC ISO format.' });
+    }
+
+    if (to && isNaN(new Date(to).getTime())) {
+        return reply.status(400).send({ message: 'Invalid "to" date format. Please use UTC ISO format.' });
+    }
+
+    const paymentSummary = await getPaymentSummary(from, to);
     return reply.status(200).send(paymentSummary);
 };

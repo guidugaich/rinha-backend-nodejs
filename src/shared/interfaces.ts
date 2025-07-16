@@ -28,3 +28,8 @@ export interface PaymentResult {
     success: boolean;
     processor: 'default' | 'fallback' | 'none';
 }
+
+export interface SummaryQuery {
+    from?: string;
+    to?: string;
+}

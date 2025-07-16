@@ -21,7 +21,9 @@ export interface PaymentData {
   }
 
 export interface PaymentJob {
-    paymentId: string;
+    correlationId: string;
+    amountInCents: number;
+    createdAt: Date;
 }
 
 export interface PaymentResult {

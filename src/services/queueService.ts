@@ -1,6 +1,6 @@
 import { pool } from '../database/connection';
 import { PaymentJob } from '../shared/interfaces';
-import { processPayment } from './paymentService';
+import { createPendingPayment, processPayment } from './paymentService';
 
 const queue: PaymentJob[] = [];
 
@@ -10,45 +10,39 @@ export function addPaymentJob(job: PaymentJob) {
 
 async function processQueue() {
   if (queue.length === 0) {
-    setTimeout(processQueue, 1000); // Wait 1s if queue is empty
+    setTimeout(processQueue, 500);
     return;
   }
 
-  const job = queue.shift(); // Get the next job
+  const job = queue.shift();
 
   if (job) {
     try {
-      const paymentQuery = await pool.query('SELECT amount_cents, correlation_id, created_at FROM payments WHERE correlation_id = $1', [job.paymentId]);
+      await createPendingPayment(job.correlationId, job.amountInCents, job.createdAt);
+      const paymentData = {
+        amount_cents: job.amountInCents,
+        correlation_id: job.correlationId,
+        created_at: job.createdAt
+      };
       
-      if (paymentQuery.rows.length === 0) {
-          process.nextTick(processQueue); // Move to next job
-          return;
-      }
-
-      const paymentData = paymentQuery.rows[0];
       const result = await processPayment(paymentData);
 
       const newStatus = result.success ? 'processed' : 'failed';
       await pool.query(
         'UPDATE payments SET status = $1, processor = $2, "updated_at" = NOW() WHERE correlation_id = $3',
-        [newStatus, result.processor, job.paymentId]
+        [newStatus, result.processor, job.correlationId]
       );
     } catch (error) {
-      try {
-        await pool.query(
-          "UPDATE payments SET status = 'failed', processor = 'none', \"updated_at\" = NOW() WHERE correlation_id = $1",
-          [job.paymentId]
-        );
-      } catch (dbError) {
-          console.error(`Failed to update job ${job.paymentId} to failed status`, dbError);
-      }
+        console.error(`Error processing job for correlationId ${job.correlationId}:`, error);
+      // If the initial insert fails (e.g., duplicate correlationId), we just log it and move on.
+      // The client already got a 202, so we can't report back.
     }
   }
 
-  // Immediately check for the next job
   process.nextTick(processQueue);
 }
 
 export function startWorker() {
+  console.log('Starting payment worker...');
   processQueue();
 }

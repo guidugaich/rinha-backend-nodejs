@@ -50,12 +50,8 @@ export async function createPendingPayment(
   amountCents: number,
   createdAt: Date,
 ): Promise<void> {
-  try {
-      await pool.query(
-          'INSERT INTO payments (correlation_id, amount_cents, status, "created_at") VALUES ($1, $2, $3, $4)',
-          [correlationId, amountCents, 'pending', createdAt]
-      );
-  } catch (error) {
-      throw error;
-  }
+  await pool.query(
+        'INSERT INTO payments (correlation_id, amount_cents, status, "created_at") VALUES ($1, $2, $3, $4)',
+        [correlationId, amountCents, 'pending', createdAt]
+    );
 }

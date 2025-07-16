@@ -1,8 +1,7 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { addPaymentJob } from '../services/queueService';
-import { getPaymentSummary } from "../services/paymentSummaryService";
-import { createPendingPayment } from "../services/paymentService";
 import { PaymentSummaryResponse, PaymentRequest, SummaryQuery } from "../shared/interfaces";
+import { getPaymentSummary } from "../services/paymentSummaryService";
 
 export async function createPaymentController(req: FastifyRequest<{ Body: PaymentRequest }>, reply: FastifyReply) {
     const { correlationId, amount } = req.body;
@@ -13,12 +12,12 @@ export async function createPaymentController(req: FastifyRequest<{ Body: Paymen
 
     try {
         const amountInCents = Math.round(amount * 100);
-        await createPendingPayment(correlationId, amountInCents, new Date());
-        addPaymentJob({ paymentId: correlationId });
+        
+        addPaymentJob({ correlationId, amountInCents, createdAt: new Date() });
 
-        return reply.status(202).send({ correlationId });
+        return reply.status(202).send();
     } catch (error) {
-        return reply.status(500).send({ message: 'Internal Server Error' });
+        return reply.status(500).send();
     }
 }
 

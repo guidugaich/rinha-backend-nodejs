@@ -36,16 +36,15 @@ async function processQueue() {
 
       const newStatus = result.success ? 'processed' : 'failed';
       await pool.query(
-        'UPDATE payments SET status = $1, processor = $2, "updatedAt" = NOW() WHERE correlation_id = $3',
+        'UPDATE payments SET status = $1, processor = $2, "updated_at" = NOW() WHERE correlation_id = $3',
         [newStatus, result.processor, job.paymentId]
       );
       console.log(`Payment job for ID: ${job.paymentId} finished with status: ${newStatus}`);
     } catch (error) {
       console.error(`Critical error processing job for payment ID ${job.paymentId}:`, error);
-      // Mark as failed on critical error
       try {
         await pool.query(
-          "UPDATE payments SET status = 'failed', processor = 'none', \"updatedAt\" = NOW() WHERE correlation_id = $1",
+          "UPDATE payments SET status = 'failed', processor = 'none', \"updated_at\" = NOW() WHERE correlation_id = $1",
           [job.paymentId]
         );
       } catch (dbError) {

@@ -5,8 +5,8 @@ config();
 
 export interface PaymentData {
   amount: number;
-  correlationId: string;
-  createdAt: Date;
+  correlation_id: string;
+  created_at: Date;
 }
 
 interface PaymentResult {
@@ -20,8 +20,8 @@ const processorFallbackHost = process.env.PAYMENT_PROCESSOR_FALLBACK_HOST;
 export async function processPayment(data: PaymentData): Promise<PaymentResult> {
   const requestBody = {
     amount: data.amount,
-    correlationId: data.correlationId,
-    requestedAt: data.createdAt.toISOString()
+    correlationId: data.correlation_id,
+    requestedAt: data.created_at.toISOString()
   }
 
   try {
@@ -32,12 +32,12 @@ export async function processPayment(data: PaymentData): Promise<PaymentResult> 
     });
 
     if (defaultProcessorResponse.ok) { // .ok is true for status codes 200-299
-      console.log(`Payment ${data.correlationId} processed successfully by default processor`);
+      console.log(`Payment ${data.correlation_id} processed successfully by default processor`);
       return { success: true, processor: 'default' };
     }
-    console.warn(`Default processor returned non-ok response for payment ${data.correlationId}:`, defaultProcessorResponse.status);
+    console.warn(`Default processor returned non-ok response for payment ${data.correlation_id}:`, defaultProcessorResponse.status);
   } catch (error) {
-    console.error(`Error on default payment processor for payment ${data.correlationId}:`, error);
+    console.error(`Error on default payment processor for payment ${data.correlation_id}:`, error);
   }
 
   console.log('Trying fallback payment processor');
@@ -49,12 +49,12 @@ export async function processPayment(data: PaymentData): Promise<PaymentResult> 
     });
 
     if (fallbackProcessorResponse.ok) {
-      console.log(`Payment ${data.correlationId} processed successfully by fallback processor`);
+      console.log(`Payment ${data.correlation_id} processed successfully by fallback processor`);
       return { success: true, processor: 'fallback' };
     }
-    console.error(`Fallback processor returned non-ok response for payment ${data.correlationId}:`, fallbackProcessorResponse.status);
+    console.error(`Fallback processor returned non-ok response for payment ${data.correlation_id}:`, fallbackProcessorResponse.status);
   } catch (error) {
-    console.error(`Error on fallback payment processor for payment ${data.correlationId}:`, error);
+    console.error(`Error on fallback payment processor for payment ${data.correlation_id}:`, error);
   }
 
   return { success: false, processor: 'none' };
@@ -67,7 +67,7 @@ export async function createPendingPayment(
 ): Promise<void> {
   try {
       await pool.query(
-          'INSERT INTO payments (correlation_id, amount, status, "createdAt") VALUES ($1, $2, $3, $4)',
+          'INSERT INTO payments (correlation_id, amount, status, "created_at") VALUES ($1, $2, $3, $4)',
           [correlationId, amount, 'pending', createdAt]
       );
   } catch (error) {

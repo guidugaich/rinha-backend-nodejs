@@ -3,7 +3,12 @@ import { addPaymentJob } from '../services/queueService';
 import { getPaymentSummary } from "../services/paymentSummaryService";
 import { createPendingPayment, PaymentData } from "../services/paymentService";
 
-export async function createPaymentController(req: FastifyRequest<{ Body: PaymentData }>, reply: FastifyReply) {
+export interface PaymentRequest {
+    correlationId: string;
+    amount: number;
+}
+
+export async function createPaymentController(req: FastifyRequest<{ Body: PaymentRequest }>, reply: FastifyReply) {
     const { correlationId, amount } = req.body;
     
     if (!correlationId || typeof amount !== 'number') {

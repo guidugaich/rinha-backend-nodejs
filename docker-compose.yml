@@ -1,5 +1,6 @@
 services:
   nginx:
+    container_name: nginx
     image: nginx:alpine
     platform: linux/amd64
     volumes:
@@ -17,12 +18,14 @@ services:
           cpus: "0.1"
           memory: "20MB"
 
-  api1:
+  api1: &api
+    container_name: api1
     build: .
     hostname: api1
     platform: linux/amd64
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - backend
       - payment-processor
@@ -42,39 +45,29 @@ services:
           memory: "105MB"
 
   api2:
-    build: .
+    <<: *api
+    container_name: api2
     hostname: api2
-    platform: linux/amd64
-    depends_on:
-      - db
-    networks:
-      - backend
-      - payment-processor
-    environment:
-      - APP_PORT=9999
-      - POSTGRES_HOST=db
-      - POSTGRES_PORT=5432
-      - POSTGRES_USER=rinha
-      - POSTGRES_PASSWORD=rinha
-      - POSTGRES_DB=rinha
-      - PAYMENT_PROCESSOR_DEFAULT_HOST=http://payment-processor-default:8080
-      - PAYMENT_PROCESSOR_FALLBACK_HOST=http://payment-processor-fallback:8080
-    deploy:
-      resources:
-        limits:
-          cpus: "0.45"
-          memory: "105MB"
 
   db:
+    container_name: db
     image: postgres:alpine
     hostname: db
     platform: linux/amd64
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rinha -d rinha"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     environment:
       - POSTGRES_DB=rinha
       - POSTGRES_USER=rinha
       - POSTGRES_PASSWORD=rinha
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./db_init/:/docker-entrypoint-initdb.d/
     networks:
       - backend
     deploy:

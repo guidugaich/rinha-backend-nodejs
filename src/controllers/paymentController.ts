@@ -18,7 +18,6 @@ export async function createPaymentController(req: FastifyRequest<{ Body: Paymen
 
         return reply.status(202).send({ correlationId });
     } catch (error) {
-        console.error('Error creating payment job:', error);
         return reply.status(500).send({ message: 'Internal Server Error' });
     }
 }

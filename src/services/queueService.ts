@@ -18,12 +18,9 @@ async function processQueue() {
 
   if (job) {
     try {
-      console.log(`Processing payment job for ID: ${job.paymentId}`);
-
       const paymentQuery = await pool.query('SELECT amount_cents, correlation_id, created_at FROM payments WHERE correlation_id = $1', [job.paymentId]);
       
       if (paymentQuery.rows.length === 0) {
-          console.error(`Payment with ID ${job.paymentId} not found in DB.`);
           process.nextTick(processQueue); // Move to next job
           return;
       }
@@ -36,9 +33,7 @@ async function processQueue() {
         'UPDATE payments SET status = $1, processor = $2, "updated_at" = NOW() WHERE correlation_id = $3',
         [newStatus, result.processor, job.paymentId]
       );
-      console.log(`Payment job for ID: ${job.paymentId} finished with status: ${newStatus}`);
     } catch (error) {
-      console.error(`Critical error processing job for payment ID ${job.paymentId}:`, error);
       try {
         await pool.query(
           "UPDATE payments SET status = 'failed', processor = 'none', \"updated_at\" = NOW() WHERE correlation_id = $1",
@@ -55,6 +50,5 @@ async function processQueue() {
 }
 
 export function startWorker() {
-  console.log('Payment worker started.');
   processQueue();
 }

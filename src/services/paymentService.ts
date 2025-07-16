@@ -21,16 +21,13 @@ export async function processPayment(data: PaymentData): Promise<PaymentResult> 
       body: JSON.stringify(requestBody),
     });
 
-    if (defaultProcessorResponse.ok) { // .ok is true for status codes 200-299
-      console.log(`Payment ${data.correlation_id} processed successfully by default processor`);
+    if (defaultProcessorResponse.ok) {
       return { success: true, processor: 'default' };
     }
-    console.warn(`Default processor returned non-ok response for payment ${data.correlation_id}:`, defaultProcessorResponse.status);
   } catch (error) {
     console.error(`Error on default payment processor for payment ${data.correlation_id}:`, error);
   }
 
-  console.log('Trying fallback payment processor');
   try {
     const fallbackProcessorResponse = await fetch(`${processorFallbackHost}/payments`, {
       method: 'POST',
@@ -39,10 +36,8 @@ export async function processPayment(data: PaymentData): Promise<PaymentResult> 
     });
 
     if (fallbackProcessorResponse.ok) {
-      console.log(`Payment ${data.correlation_id} processed successfully by fallback processor`);
       return { success: true, processor: 'fallback' };
     }
-    console.error(`Fallback processor returned non-ok response for payment ${data.correlation_id}:`, fallbackProcessorResponse.status);
   } catch (error) {
     console.error(`Error on fallback payment processor for payment ${data.correlation_id}:`, error);
   }
@@ -61,8 +56,6 @@ export async function createPendingPayment(
           [correlationId, amountCents, 'pending', createdAt]
       );
   } catch (error) {
-      console.error(`Database error creating pending payment for ${correlationId}:`, error);
-      
       throw error;
   }
 }

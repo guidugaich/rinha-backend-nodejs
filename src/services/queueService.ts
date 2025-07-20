@@ -43,6 +43,5 @@ async function processQueue() {
 }
 
 export function startWorker() {
-  console.log('Starting payment worker...');
   processQueue();
 }

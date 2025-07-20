@@ -1,11 +1,14 @@
 import { config } from 'dotenv';
 import { pool } from '../database/connection';
 import { PaymentData, PaymentResult } from '../shared/interfaces';
+import { getBestProcessor } from './paymentProcessorHealthService';
 
 config();
 
-const processorDefaultHost = process.env.PAYMENT_PROCESSOR_DEFAULT_HOST;
-const processorFallbackHost = process.env.PAYMENT_PROCESSOR_FALLBACK_HOST;
+const processorHosts = {
+  default: process.env.PAYMENT_PROCESSOR_DEFAULT_HOST,
+  fallback: process.env.PAYMENT_PROCESSOR_FALLBACK_HOST,
+};
 
 export async function processPayment(data: PaymentData): Promise<PaymentResult> {
   const requestBody = {
@@ -14,32 +17,34 @@ export async function processPayment(data: PaymentData): Promise<PaymentResult> 
     requestedAt: data.created_at.toISOString()
   }
 
-  try {
-    const defaultProcessorResponse = await fetch(`${processorDefaultHost}/payments`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(requestBody),
-    });
+  const primaryProcessor = getBestProcessor();
+  const secondaryProcessor = primaryProcessor === 'default' ? 'fallback' : 'default';
 
-    if (defaultProcessorResponse.ok) {
-      return { success: true, processor: 'default' };
+  const tryProcessor = async (processor: 'default' | 'fallback'): Promise<PaymentResult | null> => {
+    try {
+      const response = await fetch(`${processorHosts[processor]}/payments`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(requestBody),
+      });
+
+      if (response.ok) {
+        return { success: true, processor };
+      }
+    } catch (error) {
+      console.error(`Error on ${processor} payment processor for payment ${data.correlation_id}:`, error);
     }
-  } catch (error) {
-    console.error(`Error on default payment processor for payment ${data.correlation_id}:`, error);
+    return null;
   }
 
-  try {
-    const fallbackProcessorResponse = await fetch(`${processorFallbackHost}/payments`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(requestBody),
-    });
+  let result = await tryProcessor(primaryProcessor);
+  if (result) {
+    return result;
+  }
 
-    if (fallbackProcessorResponse.ok) {
-      return { success: true, processor: 'fallback' };
-    }
-  } catch (error) {
-    console.error(`Error on fallback payment processor for payment ${data.correlation_id}:`, error);
+  result = await tryProcessor(secondaryProcessor);
+  if (result) {
+    return result;
   }
 
   return { success: false, processor: 'none' };

@@ -35,3 +35,13 @@ export interface SummaryQuery {
     from?: string;
     to?: string;
 }
+
+export interface HealthStatus {
+    failing: boolean;
+    minResponseTime: number;
+}
+  
+export interface CachedHealth {
+    default: HealthStatus;
+    fallback: HealthStatus;
+}

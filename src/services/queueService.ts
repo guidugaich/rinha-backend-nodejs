@@ -1,6 +1,6 @@
 import { pool } from '../database/connection';
 import { PaymentJob } from '../shared/interfaces';
-import { createPendingPayment, processPayment } from './paymentService';
+import { createPendingPayment, processPayment, updatePaymentStatus } from './paymentService';
 
 const queue: PaymentJob[] = [];
 
@@ -28,10 +28,7 @@ async function processQueue() {
       const result = await processPayment(paymentData);
 
       const newStatus = result.success ? 'processed' : 'failed';
-      await pool.query(
-        'UPDATE payments SET status = $1, processor = $2, "updated_at" = NOW() WHERE correlation_id = $3',
-        [newStatus, result.processor, job.correlationId]
-      );
+      await updatePaymentStatus(job.correlationId, newStatus, result.processor);
     } catch (error) {
         console.error(`Error processing job for correlationId ${job.correlationId}:`, error);
       // If the initial insert fails (e.g., duplicate correlationId), we just log it and move on.

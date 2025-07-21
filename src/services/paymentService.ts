@@ -60,3 +60,14 @@ export async function createPendingPayment(
         [correlationId, amountCents, 'pending', createdAt]
     );
 }
+
+export async function updatePaymentStatus(
+  correlationId: string,
+  status: 'processed' | 'failed',
+  processor: 'default' | 'fallback' | 'none'
+): Promise<void> {
+  await pool.query(
+    'UPDATE payments SET status = $1, processor = $2, "updated_at" = NOW() WHERE correlation_id = $3',
+    [status, processor, correlationId]
+  );
+}

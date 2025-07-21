@@ -45,7 +45,14 @@ export function addPaymentJob(job: PaymentJob) {
 ### Fluxo de Processamento
 
 #### 1. **Recepção da Requisição**
-- Cliente faz POST para `/payments`
+- Cliente faz POST para `/payments` com o body:
+
+```typescript
+export interface PaymentRequest {
+    correlationId: string;
+    amount: number;
+}
+```
 - Sistema responde imediatamente com `202 Accepted`
 - Job é adicionado à fila para processamento assíncrono
 
@@ -138,11 +145,11 @@ async function updateHealthStatus() {
 }
 ```
 
-Então, a qualquer momento, uma das instancias vai "ganhar a corrida" e atualizar tanto o cache distribuido (Redis) como o cache local em memória. a instancia que perder o lock, vai simplesmente ler do Redis e também atualizar o cache local. No momento de decisão dos processor, ambas as instancias terão dados atualizados da saúde dos processors para fazer uma decisão informada.
+Então, a qualquer momento, uma das instancias vai "ganhar a corrida" e atualizar tanto o cache distribuido (Redis) como o cache local em memória. A instancia que perder o lock, vai simplesmente ler do Redis e também atualizar o cache local. No momento de decisão dos processor, ambas as instancias terão dados atualizados da saúde dos processors no cache local para fazer uma decisão informada.
 
 ## Estratégia de Seleção de Processor
 1. **Prioridade por Disponibilidade**: Se apenas um dos processadores estiver disponível, será utilizado.
-2. **Otimização por Performance**: Caso ambos estejam disponíveis, a escolha será baseada em tempo de resposta e threshold de lucro (1.118x)
+2. **Otimização por Performance**: Caso ambos estejam disponíveis, a escolha será baseada em tempo de resposta e threshold de lucro. Se o minResponseTime do default for 50% maior do que o do fallback, será utilizado o fallback. Essa taxa foi definida a partir de alguns testes locais.
 
 ```typescript
 export function getBestProcessor(): 'default' | 'fallback' {
@@ -151,7 +158,7 @@ export function getBestProcessor(): 'default' | 'fallback' {
   if (!defaultHealth.failing && fallbackHealth.failing) return 'default';
 
   // Regra 2: Otimização por lucro
-  const PROFIT_THRESHOLD = 1.118;
+  const PROFIT_THRESHOLD = 1.5;
   if (defaultHealth.minResponseTime > fallbackHealth.minResponseTime * PROFIT_THRESHOLD) {
     return 'fallback';
   }
@@ -160,13 +167,7 @@ export function getBestProcessor(): 'default' | 'fallback' {
 }
 ```
 
-#### Lógica para o threshold de lucro
-
-Margem de lucro do processor default: 95% (fee 0.05)
-Margem de lucro do processor fallback: 85% (fee 0.15)
-
-
-## 🚀 Como Executar
+## Como Executar
 
 ```bash
 # Iniciar toda a infraestrutura
@@ -176,14 +177,14 @@ docker-compose up --build
 # http://localhost:9999
 ```
 
-## 📡 Endpoints
+## Endpoints
 
 - `POST /payments` - Criação de pagamento (assíncrono)
 - `GET /payments/summary` - Relatório de pagamentos processados
 - `GET /health` - Health check da aplicação
 - `GET /health/db` - Health check do banco de dados
 
-## 🔧 Variáveis de Ambiente
+## Variáveis de Ambiente
 
 ```env
 APP_PORT=9999
@@ -197,12 +198,3 @@ REDIS_PORT=6379
 PAYMENT_PROCESSOR_DEFAULT_HOST=http://payment-processor-default:8080
 PAYMENT_PROCESSOR_FALLBACK_HOST=http://payment-processor-fallback:8080
 ```
-
-## 📊 Monitoramento
-
-O sistema oferece métricas e logs detalhados para observabilidade:
-
-- Health checks automáticos dos payment processors
-- Logs estruturados de processamento de jobs
-- Métricas de performance por processor
-- Relatórios de summary com filtros temporais

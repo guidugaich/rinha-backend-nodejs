@@ -64,7 +64,7 @@ export function getBestProcessor(): 'default' | 'fallback' {
   if (!defaultHealth.failing && fallbackHealth.failing) return 'default';
 
   // Rule 2: Both are healthy, decide based on profit
-  const PROFIT_THRESHOLD = 1.118;
+  const PROFIT_THRESHOLD = 1.5; // defined from testing
   if (defaultHealth.minResponseTime > fallbackHealth.minResponseTime * PROFIT_THRESHOLD) {
     return 'fallback';
   }
